@@ -5,7 +5,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import PolynomialFeatures
 from time import time
 
-from part1 import poly_main, preprocess_data
+import poly_main, preprocess_data
 from utils import format_time
 
 
