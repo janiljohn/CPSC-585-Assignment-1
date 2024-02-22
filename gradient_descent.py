@@ -4,11 +4,9 @@ import math
 
 class gradientDescent:
 	
-	# TODO: NORMALIZE DATA
-	# TODO: ADD POLYNOMIAL ORDERING
 	# TODO: SUMMARIZE RESULTS
 	
-	def __init__(self, infile: str="", order = 1):
+	def __init__(self, infile: str=""):
 		
 		# Define Matrix to use CSV data
 		self.mat = []
@@ -23,8 +21,12 @@ class gradientDescent:
 		# Define WT, don't need to define a W matrix since we only use WT
 		# in the gradient descent equation  
 		self.wt = []
+		# Define an array to hold normalizing values
+		self.normVals = [[1,1]]
 		# Define a list to hold a random sample set of indicies to use
 		self.cases = None
+		# Define the polynomial order
+		self.order = 1
 		# If a file is specified, then read CSV entries.
 		if infile != "":
 			self.getDataFromCsv(infile)
@@ -39,12 +41,26 @@ class gradientDescent:
 			self.features += next(reader)
 			# Read the rest of the rows
 			for r in reader:
-				# Add a row to the data matrix
-				self.mat.append(r)
-				# Convert the values to floats in the just row added 
-				self.mat[-1] = [1] + [float(i) for i in self.mat[-1]]
+				# Account for X0 in our dataset
+				self.mat.append([1])
+				# Loop through each item in the row
+				for items in range(len(list(r))):
+					# Convert the items to floats
+					temp = float(r[items])
+					# Add them to the dataset
+					self.mat[-1].append(temp)
+					# Through each row, check if the item is a min or a max value, then set them
+					# accordingly.
+					try:
+						self.normVals[items+1][0] = min(temp, self.normVals[items+1][0])
+						self.normVals[items+1][1] = max(temp, self.normVals[items+1][1])
+					# This block accounts for the start of row processing, as nothing has been
+					# added to our normalizing values. 
+					except:
+						self.normVals.append([temp, temp])
+					
 	
-	def setXandY(self, xStart: int = 0, xEnd: int, y: int):
+	def setXandY(self, xStart: int = 0, xEnd: int = 0, y: int = 0):
 		# Set the starting colomn of the independent features
 		self.xStart = xStart
 		# Set the ending column of the independent features
@@ -61,6 +77,26 @@ class gradientDescent:
 		# Shuffle the values to ensure a random ordering
 		for i in range(shuffles):
 			random.shuffle(self.cases)
+			
+	def normal(self, feature: float, fi: int)->float:
+		# Xnew = (Xold - Xmin) / (Xmax - Xmin)
+		return (feature - self.normVals[fi][0]) / (self.normVals[fi][1] - self.normVals[fi][0])
+	
+	def unnormal(self, feature: float, fi: int)->float:
+		# Xold = (Xnew) * (Xmax - Xmin) + Xmin
+		return ((feature)*(self.normVals[fi][1] - self.normVals[fi][0])) + self.normVals[fi][0]
+	
+	# Call normal function on entire feature set
+	def normalizer(self, c: list):
+		for i in range(1, len(c)):
+			c[i] = self.normal(c[i], i)
+		return c
+	
+	# Call unnormal function on entire feature set
+	def unnormalizer(self, c: list):
+		for i in range(1, len(c)):
+			c[i] = self.unnormal(c[i], i)
+		return c
 	
 	def predict(self, c: list)->float:
 		# Define a predictor value to hold our wT dot X summation
@@ -68,7 +104,7 @@ class gradientDescent:
 		# Go through each coeffiecients
 		for j in range(len(self.wt)):
 			# Perform each piece of the wT dot X equation
-			predicted += (self.wt[j] * c[j])	
+			predicted += (self.wt[j] * (c[j] ** self.order))	
 		# Return our predicted value
 		return predicted
 			
@@ -79,13 +115,13 @@ class gradientDescent:
 		for j in range(len(self.wt)):
 			# Obtain the (wT dot Xj (Predicted) - Y (Actual)) * Xij piece of GD update rule
 			for i in range(batchSize):
-				# Pop an index to test from the data set
-				c = self.mat[self.cases.pop()]
+				# Pop an index to test from the data set, then normalize it
+				c = self.normalizer([]+self.mat[self.cases.pop()])
 				# Generate a set of cases incase the case set is empty
 				if(len(self.cases) == 0):
 					self.getRandomSet(shuffles = 5)
 				# (wT dot Xj (Predicted) - Y (Actual)) * Xij
-				temp[j] += ((self.predict(c) - c[self.y]) * c[j])
+				temp[j] += ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
 			# Multiply our temp by alpha and 1\N. N in this case is our batch size
 			# temp[j] is now alpha * 1/n * sum((predicited - actual) * Xij)
 			temp[j] *= (alpha * (1 / batchSize))
@@ -98,13 +134,16 @@ class gradientDescent:
 		# Define a total error accumulator
 		totErr = 0
 		for j in range(testSize):
-			# Generate a test case
-			c = self.mat[self.cases.pop()]
+			# Generate a test case, then normalize it.
+			c = self.normalizer([]+self.mat[self.cases.pop()])
 			# Generate a new set of cases when they are empty
 			if(len(self.cases) == 0):
 				self.getRandomSet()
+			# Unnormalize the dependent features
+			predicted = self.unnormal(self.predict(c), self.y)
+			actual = self.unnormal(c[self.y], self.y)
 			# Add the generated error to the total error
-			totErr += (abs(self.predict(c) - c[self.y]) / c[self.y])
+			totErr += (abs(predicted - actual) / actual)
 		# Output the average error
 		return (totErr / testSize)
 	
@@ -117,8 +156,9 @@ class gradientDescent:
 		# Setting Batch Size to 1 results in Stochastic Descent
 		# Setting Batch Size to the size of our dataset result in Batch Gradient Descent
 		# Anything in between is Minibatch GD.
-	def gd(self, alpha: float = 1, batchSize: int = 25, testSize = 5, minErr: float = 0.1):
+	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 25, testSize = 5, minErr: float = 0.1):
 		# Generate a new set of values
+		self.order = order
 		self.getRandomSet(shuffles = 5)
 		avgErr = 1
 		# Loop until the average error reachces a certain threshold
@@ -132,11 +172,14 @@ class gradientDescent:
 		for i in range(cutoff):
 			print(f"Independent: {self.mat[i][self.xStart:self.xEnd]}\n  Dependent: {[self.mat[i][self.y]]}\n")
 		print(f"Coefficients: {self.wt}\n")
+		print(f"Order: {self.order}\n")
 			
 # TEST RUN
-gas_properties = gradientDescent("GasProperties.csv")
-gas_properties.setXandY(0, 5, 5)
-gas_properties.gd(alpha = 0.0000000000025, batchSize = 10, testSize = 2, minErr =  0.005)
-gas_properties.showData()
-gas_properties.getRandomSet()
-print(gas_properties.test(len(gas_properties.mat)))
+gp = gradientDescent("GasProperties.csv")
+gp.setXandY(0, 5, 5)
+gp.gd(alpha = 0.01, order = 0.5, batchSize = 10, testSize = 10, minErr =  0.005)
+gp.showData()
+gp.getRandomSet()
+print(f"ACCURACY: {(1 - gp.test(len(gp.mat))) * 100}%\n")
+custom_case = [1, 255, 20, 0.03, 390, 54]
+print(f"CASE: {custom_case[0:5]}\nIDX: {gp.unnormal(gp.predict(gp.normalizer(custom_case)), gp.y)}")
