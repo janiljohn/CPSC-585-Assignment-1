@@ -77,9 +77,6 @@ class gradientDescent:
 		self.xEnd = xEnd
 		# Set the index column of the dependent features
 		self.y = y
-		# Set coeffecients based on the set features being used (0 for now)
-		for i in range(xStart, xEnd):
-			self.wt.append(random.random())
 	
 	def getRandomSet(self, split: int, shuffles: int = 1)->list:
 		# Generate a range of values ending at the length of our dataset
@@ -223,6 +220,9 @@ class gradientDescent:
 		# Setting Batch Size to the size of our dataset result in Batch Gradient Descent
 		# Anything in between is Minibatch GD.
 	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 25, testSize = 5, minErr: float = 0.1, split: int = 0):
+		self.wt = []
+		for i in range(self.xStart, self.xEnd):
+			self.wt.append(random.random())
 		# Srart training timer
 		start = time.time()
 		# Generate a new set of values
@@ -271,7 +271,7 @@ gp.setXandY(0, 5, 5)
 testResults = []
 coefficients = []
 for i in range(1, 21):
-	gp.gd(alpha = 0.01, order = float(i/2), batchSize = 50, testSize = 10, minErr = 0.005 , split = int(len(gp.mat) * (5 / 6)))
+	gp.gd(alpha = 0.001, order = float(i/2), batchSize = 50, testSize = 10, minErr = 0.005 , split = int(len(gp.mat) * (5 / 6)))
 	testResults.append(gp.getResults())
 	coefficients.append(gp.wt)
 	
