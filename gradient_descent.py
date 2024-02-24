@@ -135,11 +135,10 @@ class gradientDescent:
 		for j in range(len(self.wt)):
 			# Obtain the (wT dot Xj (Predicted) - Y (Actual)) * Xij piece of GD update rule
 			for i in range(batchSize):
-				# Pop an index to test from the data set, then normalize it
-				c = self.normalizer([]+self.mat[self.trnQueue.pop()])
-				# Generate a set of cases incase the case set is empty
 				if(len(self.trnQueue) == 0):
 					self.resetCases(self.trnQueue, self.trained)
+				# Pop an index to test from the data set, then normalize it
+				c = self.normalizer([]+self.mat[self.trnQueue.pop()])
 				# (wT dot Xj (Predicted) - Y (Actual)) * Xij
 				temp[j] += ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
 			# Multiply our temp by alpha and 1\N. N in this case is our batch size
@@ -155,10 +154,10 @@ class gradientDescent:
 		totErr = 0
 		for j in range(testSize):
 			# Generate a test case, then normalize it.
-			c = self.normalizer([]+self.mat[self.tstQueue.pop()])
-			# Generate a new set of cases when they are empty
 			if(len(self.tstQueue) == 0):
 				self.resetCases(self.tstQueue, self.tested)
+			c = self.normalizer([]+self.mat[self.tstQueue.pop()])
+			# Generate a new set of cases when they are empty
 			# Unnormalize the dependent features
 			predicted = self.unnormal(self.predict(c), self.y)
 			actual = self.unnormal(c[self.y], self.y)
@@ -219,7 +218,7 @@ class gradientDescent:
 		# Setting Batch Size to 1 results in Stochastic Descent
 		# Setting Batch Size to the size of our dataset result in Batch Gradient Descent
 		# Anything in between is Minibatch GD.
-	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 25, testSize = 5, minErr: float = 0.1, split: int = 0):
+	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 250, testSize = 50, minErr: float = 0.1, split: int = 0):
 		self.wt = []
 		for i in range(self.xStart, self.xEnd):
 			self.wt.append(random.random())
