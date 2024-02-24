@@ -91,12 +91,16 @@ class gradientDescent:
 		self.tested = []
 	
 	# Switches the queues and already used values 
-	def resetCases(self, empty: list, holder: list):
-		empty = [] + holder
-		holder = []
+	def resetTrnCases(self):
+		self.trnQueue = [] + self.trained
+		self.trained = []
 		# shuffle our queue again
-		random.shuffle(empty)
-			
+		random.shuffle(self.trnQueue)
+		
+	def resetTstCases(self):
+		self.tstQueue = [] + self.tested
+		self.tested = []
+		random.shuffle(self.tstQueue)
 			
 	def normal(self, feature: float, fi: int)->float:
 		# Xnew = (Xold - Xmin) / (Xmax - Xmin)
@@ -136,9 +140,11 @@ class gradientDescent:
 			# Obtain the (wT dot Xj (Predicted) - Y (Actual)) * Xij piece of GD update rule
 			for i in range(batchSize):
 				if(len(self.trnQueue) == 0):
-					self.resetCases(self.trnQueue, self.trained)
+					self.resetTrnCases()
 				# Pop an index to test from the data set, then normalize it
-				c = self.normalizer([]+self.mat[self.trnQueue.pop()])
+				ci = self.trnQueue.pop()
+				self.trained.append(ci)
+				c = self.normalizer([]+self.mat[ci])
 				# (wT dot Xj (Predicted) - Y (Actual)) * Xij
 				temp[j] += ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
 			# Multiply our temp by alpha and 1\N. N in this case is our batch size
@@ -155,8 +161,10 @@ class gradientDescent:
 		for j in range(testSize):
 			# Generate a test case, then normalize it.
 			if(len(self.tstQueue) == 0):
-				self.resetCases(self.tstQueue, self.tested)
-			c = self.normalizer([]+self.mat[self.tstQueue.pop()])
+				self.resetTstCases()
+			ci = self.tstQueue.pop()
+			self.tested.append(ci)
+			c = self.normalizer([]+self.mat[ci])
 			# Generate a new set of cases when they are empty
 			# Unnormalize the dependent features
 			predicted = self.unnormal(self.predict(c), self.y)
@@ -270,7 +278,7 @@ gp.setXandY(0, 5, 5)
 testResults = []
 coefficients = []
 for i in range(1, 21):
-	gp.gd(alpha = 0.001, order = float(i/2), batchSize = 50, testSize = 10, minErr = 0.005 , split = int(len(gp.mat) * (5 / 6)))
+	gp.gd(alpha = 0.005, order = float(i/2), batchSize = 250, testSize = 50, minErr = 0.005 , split = int(len(gp.mat) * (5 / 6)))
 	testResults.append(gp.getResults())
 	coefficients.append(gp.wt)
 	
@@ -280,4 +288,3 @@ print("RESULTS FORMAT: [ORDER, TRAIN RMSE, TRAIN R^2, TRAINING TIME, TEST RMSE, 
 for i in range(len(testResults)):
 	print(f"RESULTS: {testResults[i]}")
 	print(f"COEFFICIENTS: {coefficients[i]}\n")
-	
