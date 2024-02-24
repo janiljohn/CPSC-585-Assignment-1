@@ -1,10 +1,8 @@
 import csv
 import random
-import math
+import time
 
 class gradientDescent:
-	
-	# TODO: SUMMARIZE RESULTS
 	
 	def __init__(self, infile: str=""):
 		
@@ -24,9 +22,21 @@ class gradientDescent:
 		# Define an array to hold normalizing values
 		self.normVals = [[1,1]]
 		# Define a list to hold a random sample set of indicies to use
-		self.cases = None
+		self.trnQueue = None
+		self.testCases = None
+		self.trained = None
+		self.tested = None
 		# Define the polynomial order
 		self.order = 1
+		# Define the results
+		self.ymean = 0
+		self.rss = 0
+		self.tss = 0
+		self.mse = 0
+		self.rmse = 0
+		self.rsq = 0
+		self.totPred = 0
+		self.elapsedTime = 0
 		# If a file is specified, then read CSV entries.
 		if infile != "":
 			self.getDataFromCsv(infile)
@@ -69,14 +79,27 @@ class gradientDescent:
 		self.y = y
 		# Set coeffecients based on the set features being used (0 for now)
 		for i in range(xStart, xEnd):
-			self.wt.append(0)
+			self.wt.append(random.random())
 	
-	def getRandomSet(self, shuffles: int = 1)->list:
+	def getRandomSet(self, split: int, shuffles: int = 1)->list:
 		# Generate a range of values ending at the length of our dataset
-		self.cases = list(range(0, len(self.mat)))
+		cases = list(range(0, len(self.mat)))
 		# Shuffle the values to ensure a random ordering
 		for i in range(shuffles):
-			random.shuffle(self.cases)
+			random.shuffle(cases)
+		# Split those cases into a train and test side
+		self.trnQueue = [] + cases[:split]
+		self.tstQueue = [] + cases[split:]
+		self.trained = []
+		self.tested = []
+	
+	# Switches the queues and already used values 
+	def resetCases(self, empty: list, holder: list):
+		empty = [] + holder
+		holder = []
+		# shuffle our queue again
+		random.shuffle(empty)
+			
 			
 	def normal(self, feature: float, fi: int)->float:
 		# Xnew = (Xold - Xmin) / (Xmax - Xmin)
@@ -116,10 +139,10 @@ class gradientDescent:
 			# Obtain the (wT dot Xj (Predicted) - Y (Actual)) * Xij piece of GD update rule
 			for i in range(batchSize):
 				# Pop an index to test from the data set, then normalize it
-				c = self.normalizer([]+self.mat[self.cases.pop()])
+				c = self.normalizer([]+self.mat[self.trnQueue.pop()])
 				# Generate a set of cases incase the case set is empty
-				if(len(self.cases) == 0):
-					self.getRandomSet(shuffles = 5)
+				if(len(self.trnQueue) == 0):
+					self.resetCases(self.trnQueue, self.trained)
 				# (wT dot Xj (Predicted) - Y (Actual)) * Xij
 				temp[j] += ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
 			# Multiply our temp by alpha and 1\N. N in this case is our batch size
@@ -135,10 +158,10 @@ class gradientDescent:
 		totErr = 0
 		for j in range(testSize):
 			# Generate a test case, then normalize it.
-			c = self.normalizer([]+self.mat[self.cases.pop()])
+			c = self.normalizer([]+self.mat[self.tstQueue.pop()])
 			# Generate a new set of cases when they are empty
-			if(len(self.cases) == 0):
-				self.getRandomSet()
+			if(len(self.tstQueue) == 0):
+				self.resetCases(self.tstQueue, self.tested)
 			# Unnormalize the dependent features
 			predicted = self.unnormal(self.predict(c), self.y)
 			actual = self.unnormal(c[self.y], self.y)
@@ -151,35 +174,111 @@ class gradientDescent:
 	def trainTest(self, alpha: float = 1, batchSize: int = 25, testSize: int = 5)->float:
 		self.train(alpha, batchSize)
 		return self.test(testSize)
+	
+	def getYMean(self):
+		# Record the mean of our predicted values
+		self.ymean = self.totPred / len(self.mat)
+	
+	def getRss(self, caseSet: list):
+		self.rss = 0
+		self.totPred = 0
+		# Go through the cases in a set
+		for row in caseSet:
+			# Pop off a case, then normalize it
+			c = self.normalizer([]+self.mat[row])
+			# Get the the true value of our actual
+			actual = self.unnormal(c[self.y], self.y)
+			# Get the true value of our predicted
+			predicted = self.unnormal(self.predict(c), self.y)
+			# Record the total predicted values, will use this in another function
+			self.totPred += predicted
+			# Get the rss for one case, the add it to the total
+			self.rss += ((actual - predicted) ** 2)
+	
+	# USE AFTER YOU GET THE RSS
+	def getTss(self, caseSet: list):
+		self.tss = 0
+		# Get the mean of our total predicted
+		self.getYMean()
+		# Go through the cases in a set
+		for row in caseSet:
+			# Pop a case, the normalize it
+			c = self.normalizer([]+self.mat[row])
+			# Get the true value of the actual
+			actual = self.unnormal(c[self.y], self.y)
+			# Record the TSS for an instance
+			self.tss += ((actual - self.ymean) ** 2)
+			
+	def getMse(self, caseSize):
+		self.mse = self.rss / caseSize
+	
+	def getRmse(self):
+		self.rmse = self.mse ** (0.5)
+	
+	def getRsq(self):
+		self.rsq = 1 - (self.rss / self.tss)
 		
 	# Gradient descent Handler:
 		# Setting Batch Size to 1 results in Stochastic Descent
 		# Setting Batch Size to the size of our dataset result in Batch Gradient Descent
 		# Anything in between is Minibatch GD.
-	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 25, testSize = 5, minErr: float = 0.1):
+	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 25, testSize = 5, minErr: float = 0.1, split: int = 0):
+		# Srart training timer
+		start = time.time()
 		# Generate a new set of values
 		self.order = order
-		self.getRandomSet(shuffles = 5)
+		self.getRandomSet(split, shuffles = 5)
 		avgErr = 1
 		# Loop until the average error reachces a certain threshold
 		while (avgErr >= minErr):
 			# Step through a train/test, recording the average error at each step
 			avgErr = self.trainTest(alpha, batchSize, testSize)
+		# End training timer
+		end = time.time()
+		# Record the total time
+		self.elapsedTime = (end - start)
 		
 	#For debugging purposes.
 	def showData(self, cutoff: int = 20):
 		print(f"\nX Features: {self.features[self.xStart:self.xEnd]}\nY Features: {[self.features[self.y]]}\n")
 		for i in range(cutoff):
 			print(f"Independent: {self.mat[i][self.xStart:self.xEnd]}\n  Dependent: {[self.mat[i][self.y]]}\n")
-		print(f"Coefficients: {self.wt}\n")
-		print(f"Order: {self.order}\n")
-			
+	
+	def getResults(self)->list:
+		trainCases = [] + self.trnQueue + self.trained
+		testCases = [] + self.tstQueue + self.tested
+		self.getRss(trainCases)
+		self.getMse(len(trainCases))
+		self.getRmse()
+		self.getTss(trainCases)
+		self.getRsq()
+		trainRmse = self.rmse
+		trainRsq = self.rsq
+		self.getRss(testCases)
+		self.getMse(len(testCases))
+		self.getRmse()
+		self.getTss(testCases)
+		self.getRsq()
+		testRmse = self.rmse
+		testRsq = self.rsq
+		self.tstQueue = [] + testCases
+		self.tested = []
+		return [self.order, trainRmse, trainRsq, self.elapsedTime, testRmse, testRsq, self.test(len(testCases))]
+		
 # TEST RUN
 gp = gradientDescent("GasProperties.csv")
 gp.setXandY(0, 5, 5)
-gp.gd(alpha = 0.01, order = 0.5, batchSize = 10, testSize = 10, minErr =  0.005)
-gp.showData()
-gp.getRandomSet()
-print(f"ACCURACY: {(1 - gp.test(len(gp.mat))) * 100}%\n")
-custom_case = [1, 255, 20, 0.03, 390, 54]
-print(f"CASE: {custom_case[0:5]}\nIDX: {gp.unnormal(gp.predict(gp.normalizer(custom_case)), gp.y)}")
+testResults = []
+coefficients = []
+for i in range(1, 21):
+	gp.gd(alpha = 0.01, order = float(i/2), batchSize = 50, testSize = 10, minErr = 0.005 , split = int(len(gp.mat) * (5 / 6)))
+	testResults.append(gp.getResults())
+	coefficients.append(gp.wt)
+	
+
+print(f"NORMALIZING VALUES: {gp.normVals}\n")	
+print("RESULTS FORMAT: [ORDER, TRAIN RMSE, TRAIN R^2, TRAINING TIME, TEST RMSE, TEST R^2, ERROR]\n")
+for i in range(len(testResults)):
+	print(f"RESULTS: {testResults[i]}")
+	print(f"COEFFICIENTS: {coefficients[i]}\n")
+	
