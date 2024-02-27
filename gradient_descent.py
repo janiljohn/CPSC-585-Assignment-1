@@ -1,7 +1,6 @@
 import csv
 import random
 import time
-import math
 
 class gradientDescent:
 	
@@ -285,8 +284,7 @@ class gradientDescent:
 gp = gradientDescent("GasProperties.csv")
 gp.setXandY(0, 5, 5)
 testResults = []
-results_format = ["ORDER"] + gp.features + ["TRAIN RMSE", "TRAIN R^2", "TRAINED CASES", "TRAINING TIME", "TEST RMSE", "TEST R^2", "TESTED CASES", "ERROR"]
-print(results_format)
+results_format = ["ORDER"] + gp.features[:gp.xEnd] + ["TRAIN RMSE", "TRAIN R^2", "TRAINED CASES", "TRAINING TIME", "TEST RMSE", "TEST R^2", "TESTED CASES", "ERROR"]
 print("Generating models...")
 with open("GP_MODELS.csv", mode = 'w', newline='') as outfile:
 	writer = csv.writer(outfile)
@@ -295,5 +293,3 @@ with open("GP_MODELS.csv", mode = 'w', newline='') as outfile:
 		gp.gd(alpha = 0.01, order = float(i/2), batchSize = 500, testSize = 100, minErr = 0.0033, split = int(len(gp.mat) * (5/6)))
 		writer.writerow(gp.getResults())
 print("Done!")
-
-
