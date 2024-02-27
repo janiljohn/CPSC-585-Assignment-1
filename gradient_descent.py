@@ -1,6 +1,7 @@
 import csv
 import random
 import time
+import math
 
 class gradientDescent:
 	
@@ -37,6 +38,8 @@ class gradientDescent:
 		self.rsq = 0
 		self.totPred = 0
 		self.elapsedTime = 0
+		self.trainCounter = 0
+		self.testCounter = 0
 		# If a file is specified, then read CSV entries.
 		if infile != "":
 			self.getDataFromCsv(infile)
@@ -105,10 +108,12 @@ class gradientDescent:
 	def normal(self, feature: float, fi: int)->float:
 		# Xnew = (Xold - Xmin) / (Xmax - Xmin)
 		return (feature - self.normVals[fi][0]) / (self.normVals[fi][1] - self.normVals[fi][0])
+		# return feature
 	
 	def unnormal(self, feature: float, fi: int)->float:
 		# Xold = (Xnew) * (Xmax - Xmin) + Xmin
 		return ((feature)*(self.normVals[fi][1] - self.normVals[fi][0])) + self.normVals[fi][0]
+		# return feature
 	
 	# Call normal function on entire feature set
 	def normalizer(self, c: list):
@@ -146,14 +151,14 @@ class gradientDescent:
 				self.trained.append(ci)
 				c = self.normalizer([]+self.mat[ci])
 				# (wT dot Xj (Predicted) - Y (Actual)) * Xij
-				temp[j] += ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
+				temp[j] += alpha * (1 / batchSize) * ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
 			# Multiply our temp by alpha and 1\N. N in this case is our batch size
 			# temp[j] is now alpha * 1/n * sum((predicited - actual) * Xij)
-			temp[j] *= (alpha * (1 / batchSize))
 		# Update our coeffiecents as per the final part of the update rule
 		# Wj = Wj - alpha * 1\N * sum((predicted - actual) * Xij)
 		for j in range(len(self.wt)):
 			self.wt[j] -= temp[j]
+		self.trainCounter += batchSize
 			
 	def test(self, testSize: int):
 		# Define a total error accumulator
@@ -172,6 +177,7 @@ class gradientDescent:
 			# Add the generated error to the total error
 			totErr += (abs(predicted - actual) / actual)
 		# Output the average error
+		self.testCounter += testSize
 		return (totErr / testSize)
 	
 	# Helper function to step through a piece of GD.
@@ -195,6 +201,7 @@ class gradientDescent:
 			# Get the true value of our predicted
 			predicted = self.unnormal(self.predict(c), self.y)
 			# Record the total predicted values, will use this in another function
+			# (there is probably a better way to do this... idc!)
 			self.totPred += predicted
 			# Get the rss for one case, the add it to the total
 			self.rss += ((actual - predicted) ** 2)
@@ -217,7 +224,7 @@ class gradientDescent:
 		self.mse = self.rss / caseSize
 	
 	def getRmse(self):
-		self.rmse = self.mse ** (0.5)
+		self.rmse = self.mse ** 0.5
 	
 	def getRsq(self):
 		self.rsq = 1 - (self.rss / self.tss)
@@ -226,7 +233,9 @@ class gradientDescent:
 		# Setting Batch Size to 1 results in Stochastic Descent
 		# Setting Batch Size to the size of our dataset result in Batch Gradient Descent
 		# Anything in between is Minibatch GD.
-	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 250, testSize = 50, minErr: float = 0.1, split: int = 0):
+	def gd(self, alpha: float = 1, order: float = 1, batchSize: int = 50, testSize = 10, minErr: float = 0.1, split: int = 0):
+		self.trainCounter = 0
+		self.testCounter = 0
 		self.wt = []
 		for i in range(self.xStart, self.xEnd):
 			self.wt.append(random.random())
@@ -270,21 +279,21 @@ class gradientDescent:
 		testRsq = self.rsq
 		self.tstQueue = [] + testCases
 		self.tested = []
-		return [self.order, trainRmse, trainRsq, self.elapsedTime, testRmse, testRsq, self.test(len(testCases))]
+		return [self.order] + ([] + self.wt) +  [trainRmse, trainRsq, self.trainCounter, self.elapsedTime, testRmse, testRsq, self.testCounter, self.test(len(testCases))]
 		
 # TEST RUN
 gp = gradientDescent("GasProperties.csv")
 gp.setXandY(0, 5, 5)
 testResults = []
-coefficients = []
-for i in range(1, 21):
-	gp.gd(alpha = 0.005, order = float(i/2), batchSize = 250, testSize = 50, minErr = 0.005 , split = int(len(gp.mat) * (5 / 6)))
-	testResults.append(gp.getResults())
-	coefficients.append(gp.wt)
-	
+results_format = ["ORDER"] + gp.features + ["TRAIN RMSE", "TRAIN R^2", "TRAINED CASES", "TRAINING TIME", "TEST RMSE", "TEST R^2", "TESTED CASES", "ERROR"]
+print(results_format)
+print("Generating models...")
+with open("GP_MODELS.csv", mode = 'w', newline='') as outfile:
+	writer = csv.writer(outfile)
+	writer.writerow(results_format)
+	for i in range(1, 21):
+		gp.gd(alpha = 0.01, order = float(i/2), batchSize = 500, testSize = 100, minErr = 0.0033, split = int(len(gp.mat) * (5/6)))
+		writer.writerow(gp.getResults())
+print("Done!")
 
-print(f"NORMALIZING VALUES: {gp.normVals}\n")	
-print("RESULTS FORMAT: [ORDER, TRAIN RMSE, TRAIN R^2, TRAINING TIME, TEST RMSE, TEST R^2, ERROR]\n")
-for i in range(len(testResults)):
-	print(f"RESULTS: {testResults[i]}")
-	print(f"COEFFICIENTS: {coefficients[i]}\n")
+
