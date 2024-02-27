@@ -1,6 +1,7 @@
 import csv
 import random
 import time
+import os
 
 class gradientDescent:
 	
@@ -285,11 +286,26 @@ gp = gradientDescent("GasProperties.csv")
 gp.setXandY(0, 5, 5)
 testResults = []
 results_format = ["ORDER"] + gp.features[:gp.xEnd] + ["TRAIN RMSE", "TRAIN R^2", "TRAINED CASES", "TRAINING TIME", "TEST RMSE", "TEST R^2", "TESTED CASES", "ERROR"]
-print("Generating models...")
+cool_animation_thing = ["|", "\\", "-", "/"]
+startTime = time.time()
 with open("GP_MODELS.csv", mode = 'w', newline='') as outfile:
 	writer = csv.writer(outfile)
+	writer.writerow(["FEATURE","MIN","MAX"])
+	print("Writing normalizing values...")
+	for i in range(len(gp.normVals)):
+		os.system("cls")
+		print("Writing normalizing values... " + gp.features[i])
+		writer.writerow([gp.features[i], gp.normVals[i][0], gp.normVals[i][1]])
+	writer.writerow([])
 	writer.writerow(results_format)
-	for i in range(1, 21):
-		gp.gd(alpha = 0.01, order = float(i/2), batchSize = 500, testSize = 100, minErr = 0.0033, split = int(len(gp.mat) * (5/6)))
+	os.system("cls")
+	print("Generating models...")
+	for i in range(1, 31):
+		os.system("cls")
+		print("Generating models... " + cool_animation_thing[(i - 1) % 4])
+		print(f"(Order: {float(i/2)})")
+		gp.gd(alpha = 0.01, order = float(i/2), batchSize = 2500, testSize = 500, minErr = 0.003333, split = int(len(gp.mat) * (5/6)))
 		writer.writerow(gp.getResults())
-print("Done!")
+	os.system("cls")
+endTime = time.time()
+print("Done! (" + "{:.2f}".format(endTime - startTime) + "s)")
