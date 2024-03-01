@@ -245,9 +245,11 @@ class gradientDescent:
 		self.order = order
 		self.getRandomSet(split, shuffles = 5)
 		avgErr = 1
-		# Loop until the average error reachces a certain threshold
-		while (avgErr >= minErr):
+		lastErr = 1
+		# Loop until the average error reachces a certain threshold, and the avgErr stops decreasing
+		while (avgErr >= minErr or avgErr <= lastErr):
 			# Step through a train/test, recording the average error at each step
+			lastErr = avgErr
 			avgErr = self.trainTest(alpha, batchSize, testSize)
 		# End training timer
 		end = time.time()
@@ -300,11 +302,12 @@ with open("GP_MODELS.csv", mode = 'w', newline='') as outfile:
 	writer.writerow(results_format)
 	os.system("cls")
 	print("Generating models...")
-	for i in range(1, 31):
+	for i in range(1, 21):
 		os.system("cls")
 		print("Generating models... " + cool_animation_thing[(i - 1) % 4])
 		print(f"(Order: {float(i/2)})")
-		gp.gd(alpha = 0.01, order = float(i/2), batchSize = 2500, testSize = 500, minErr = 0.003333, split = int(len(gp.mat) * (5/6)))
+		#set min error to 1 for true GD
+		gp.gd(alpha = 0.01, order = float(i/2), batchSize = 50, testSize = 10, minErr = 1, split = int(len(gp.mat) * (5/6)))
 		writer.writerow(gp.getResults())
 	os.system("cls")
 endTime = time.time()
