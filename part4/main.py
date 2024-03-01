@@ -14,8 +14,6 @@ y = dataset['spam']
 # Split the data
 X_train, X_test, y_train, y_test = split_dataset(X, y)
 
-# You can now print the feature names or the shapes of the split data
-print(feature_names)
 print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
 # Training the classifiers

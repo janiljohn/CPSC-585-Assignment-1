@@ -39,7 +39,6 @@ def evaluate_classifier(classifier, X_test, y_test):
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.01, 1.05])
-    plt.yscale('log')  # Set the y-axis to a logarithmic scale
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('Receiver Operating Characteristic (Log Scale)')
