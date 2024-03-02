@@ -19,27 +19,28 @@ X, feature_names = bag_of_wordsify(dataset=dataset,feature_functions=feature_fun
 
 y = dataset['spam']
 
-for XSet in [X_featureless, X]:
-    # Split the data
-    X_train, X_test, y_train, y_test = split_dataset(XSet, y)
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-    print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-    # Training the classifiers
-    logistic_regression_classifier = train_logistic_regression(X_train, y_train)
-    naive_bayes_classifier = train_naive_bayes(X_train, y_train)
+# Example Degree
+poly_degree = 1
 
-    # Evaluating the classifiers
-    print("Logistic Regression Classifier Evaluation")
-    lr_conf_matrix, lr_accuracy, lr_precision = evaluate_classifier(logistic_regression_classifier, X_test, y_test)
+logistic_regression_classifier, lr_poly = train_logistic_regression(X_train, y_train, poly_degree=poly_degree)
+naive_bayes_classifier, nb_poly = train_naive_bayes(X_train, y_train, poly_degree=poly_degree)
 
-    print("Confusion Matrix:\n", lr_conf_matrix)
-    print("Accuracy:", lr_accuracy)
-    print("Precision:", lr_precision)
+# Evaluating the classifiers
+print("Logistic Regression Classifier Evaluation")
+lr_conf_matrix, lr_accuracy, lr_precision = evaluate_classifier(logistic_regression_classifier, lr_poly, X_test, y_test, classifier_name="Logistic_regression")
 
-    print("\nNaive Bayes Classifier Evaluation")
-    nb_conf_matrix, nb_accuracy, nb_precision = evaluate_classifier(naive_bayes_classifier, X_test, y_test)
+print("Confusion Matrix:\n", lr_conf_matrix)
+print("Accuracy:", lr_accuracy)
+print("Precision:", lr_precision)
 
-    print("Confusion Matrix:\n", nb_conf_matrix)
-    print("Accuracy:", nb_accuracy)
-    print("Precision:", nb_precision)
+print("\nNaive Bayes Classifier Evaluation")
+nb_conf_matrix, nb_accuracy, nb_precision = evaluate_classifier(naive_bayes_classifier, nb_poly, X_test, y_test, classifier_name="Naive_Bayes")
+
+print("Confusion Matrix:\n", nb_conf_matrix)
+print("Accuracy:", nb_accuracy)
+print("Precision:", nb_precision)
