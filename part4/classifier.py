@@ -5,6 +5,9 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 
+#TEMP IMPORTS
+from sklearn.svm import SVC
+
 def train_logistic_regression(X_train, y_train, poly_degree=1):
     # Transform input data to include polynomial features
     poly = PolynomialFeatures(degree=poly_degree)
@@ -54,7 +57,7 @@ def evaluate_classifier(classifier, poly, X_test, y_test, classifier_name):
         plt.ylim([0.01, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic (Log Scale)')
+        plt.title(f'ROC Curve for {classifier_name}')
         plt.legend(loc="lower right")
         plt.savefig(f"ROC Curve-{classifier_name}.png")
         plt.show()
