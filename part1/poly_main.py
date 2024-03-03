@@ -59,4 +59,12 @@ def polynomial_regression(df, degree=1, test_size=0.2):
         'Testing R^2': test_r2
     }
 
+    # Print matrix of weights for polynomial function
+    coefficients = regressor.coef_
+    intercept = regressor.intercept_
+
+    df = pd.DataFrame(coefficients.reshape(1, -1), columns=poly_features.get_feature_names(['T', 'P', 'TC', 'SV',]))
+    df.insert(0, 'Intercept', intercept)
+    print(df)
+
     return results
