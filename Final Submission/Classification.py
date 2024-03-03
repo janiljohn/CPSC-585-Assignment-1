@@ -31,9 +31,10 @@ def bag_of_wordsify(dataset, feature_functions=[], max_token_features=1000):
         text = re.sub('[^A-Za-z]', ' ', text).lower()
         words = word_tokenize(text)
         words = [word for word in words if word not in stop_words]
-        # Join the words back into one string separated by space, and append to cleaned_texts
+
         cleaned_text = ' '.join(words)
         cleaned_texts.append(cleaned_text)
+        # print(cleaned_text)
 
         for i, func in enumerate(feature_functions):
             custom_features[i].append(func(text))
@@ -72,7 +73,6 @@ def train_naive_bayes(X_train, y_train, poly_degree=1):
     poly = PolynomialFeatures(degree=poly_degree)
     X_train_poly = poly.fit_transform(X_train)
     
-    # Initialize the Naive Bayes
     naive_bayes_classifier = MultinomialNB()
     naive_bayes_classifier.fit(X_train_poly, y_train)
     return naive_bayes_classifier, poly
