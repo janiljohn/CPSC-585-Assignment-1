@@ -16,12 +16,6 @@ import matplotlib.pyplot as plt
 from sklearn.svm import SVC
 
 
-
-
-
-
-
-
 # BOW FILE 
 def bag_of_wordsify(dataset, feature_functions=[], max_token_features=1000):
     nltk.download('punkt')
@@ -71,13 +65,6 @@ def split_dataset(X, y):
     # Split the dataset into training and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     return X_train, X_test, y_train, y_test
-
-
-
-
-
-
-
 
 
 # CLASSIFIER FILE
@@ -139,22 +126,17 @@ def evaluate_classifier(classifier, poly, X_test, y_test, classifier_name):
     return conf_matrix, accuracy, precision
 
 
-
-
-
-
-
 # MAIN FILE
 # Example custom feature functions
 def contains_not(text):
     return 1 if 'not' in text.split() else 0
 
-def contains_awesome(text):
-    return 1 if 'awesome' in text.split() else 0
+def contains_security(text):
+    return 1 if 'security' in text.split() else 0
 
 #Load the email dataset
 dataset = pd.read_csv('emails.csv', encoding='ISO-8859-1')
-feature_functions = [contains_not, contains_awesome]
+feature_functions = [contains_not, contains_security]
 X_featureless, feature_names = bag_of_wordsify(dataset=dataset,feature_functions=[], max_token_features=50)
 X, feature_names = bag_of_wordsify(dataset=dataset,feature_functions=feature_functions, max_token_features=50)
 
