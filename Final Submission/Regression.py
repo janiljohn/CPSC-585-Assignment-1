@@ -9,7 +9,11 @@ import random
 # import time
 import os
 
+
+
+# ==========================
 # Least Square Method
+# ==========================
 
 def polynomial_regression(df: pd.DataFrame, degree=1, test_size=0.2):
     X = df[['T', 'P', 'TC', 'SV']]
@@ -106,8 +110,14 @@ def runLeastSquareMessage():
     trainTestLeastSquare(gas_properties)
     trainTestLeastSquare(preped_data)
 
-# Gradient Descent
 
+
+
+
+# ==========================
+# Gradient Descent Method
+# ==========================
+	
 class gradientDescent:
 	
 	def __init__(self, infile: str=""):
@@ -418,7 +428,12 @@ def runGradientDescent():
 	endTime = time()
 	print("Done! (" + "{:.2f}".format(endTime - startTime) + "s)")
 
-# LASSO
+
+
+
+# ==========================
+# LASSO Method
+# ==========================
     
 def trainTestLasso(alpha_rate=0.1): 
         gas_properties = pd.read_csv('GasProperties.csv')
