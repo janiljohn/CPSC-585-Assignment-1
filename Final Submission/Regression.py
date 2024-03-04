@@ -125,7 +125,7 @@ class gradientDescent:
 		# Define WT, don't need to define a W matrix since we only use WT
 		# in the gradient descent equation  
 		self.wt = []
-		# Define an array to hold normalizing values
+		# Define an array to hold scaling values
 		self.normVals = [[1,1]]
 		# Define a list to hold a random sample set of indicies to use
 		self.trnQueue = None
@@ -173,7 +173,7 @@ class gradientDescent:
 						self.normVals[items+1][0] = min(temp, self.normVals[items+1][0])
 						self.normVals[items+1][1] = max(temp, self.normVals[items+1][1])
 					# This block accounts for the start of row processing, as nothing has been
-					# added to our normalizing values. 
+					# added to our scaleizing values. 
 					except:
 						self.normVals.append([temp, temp])
 					
@@ -210,26 +210,26 @@ class gradientDescent:
 		self.tested = []
 		random.shuffle(self.tstQueue)
 			
-	def normal(self, feature: float, fi: int)->float:
+	def scale(self, feature: float, fi: int)->float:
 		# Xnew = (Xold - Xmin) / (Xmax - Xmin)
 		return (feature - self.normVals[fi][0]) / (self.normVals[fi][1] - self.normVals[fi][0])
 		# return feature
 	
-	def unnormal(self, feature: float, fi: int)->float:
+	def unscale(self, feature: float, fi: int)->float:
 		# Xold = (Xnew) * (Xmax - Xmin) + Xmin
 		return ((feature)*(self.normVals[fi][1] - self.normVals[fi][0])) + self.normVals[fi][0]
 		# return feature
 	
-	# Call normal function on entire feature set
-	def normalizer(self, c: list):
+	# Call scale function on entire feature set
+	def scaler(self, c: list):
 		for i in range(1, len(c)):
-			c[i] = self.normal(c[i], i)
+			c[i] = self.scale(c[i], i)
 		return c
 	
-	# Call unnormal function on entire feature set
-	def unnormalizer(self, c: list):
+	# Call unscale function on entire feature set
+	def unscaler(self, c: list):
 		for i in range(1, len(c)):
-			c[i] = self.unnormal(c[i], i)
+			c[i] = self.unscale(c[i], i)
 		return c
 	
 	def predict(self, c: list)->float:
@@ -251,16 +251,17 @@ class gradientDescent:
 			for i in range(batchSize):
 				if(len(self.trnQueue) == 0):
 					self.resetTrnCases()
-				# Pop an index to test from the data set, then normalize it
+				# Pop an index to test from the data set, then scaleize it
 				ci = self.trnQueue.pop()
 				self.trained.append(ci)
-				c = self.normalizer([]+self.mat[ci])
+				c = [] + self.scaler([]+self.mat[ci][self.xStart:self.xEnd]) + [self.mat[ci][self.y]]
 				# (wT dot Xj (Predicted) - Y (Actual)) * Xij
-				temp[j] += alpha * (1 / batchSize) * ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
+				temp[j] += ((self.predict(c) - c[self.y]) * (c[j] ** self.order))
 			# Multiply our temp by alpha and 1\N. N in this case is our batch size
 			# temp[j] is now alpha * 1/n * sum((predicited - actual) * Xij)
 		# Update our coeffiecents as per the final part of the update rule
 		# Wj = Wj - alpha * 1\N * sum((predicted - actual) * Xij)
+			temp[j] *= (alpha * (1 / batchSize))
 		for j in range(len(self.wt)):
 			self.wt[j] -= temp[j]
 		self.trainCounter += batchSize
@@ -269,16 +270,15 @@ class gradientDescent:
 		# Define a total error accumulator
 		totErr = 0
 		for j in range(testSize):
-			# Generate a test case, then normalize it.
+			# Generate a test case, then scaleize it.
 			if(len(self.tstQueue) == 0):
 				self.resetTstCases()
 			ci = self.tstQueue.pop()
 			self.tested.append(ci)
-			c = self.normalizer([]+self.mat[ci])
+			c = [] + self.scaler([]+self.mat[ci][self.xStart:self.xEnd]) + [self.mat[ci][self.y]]
 			# Generate a new set of cases when they are empty
-			# Unnormalize the dependent features
-			predicted = self.unnormal(self.predict(c), self.y)
-			actual = self.unnormal(c[self.y], self.y)
+			predicted = self.predict(c)
+			actual = c[self.y]
 			# Add the generated error to the total error
 			totErr += (abs(predicted - actual) / actual)
 		# Output the average error
@@ -300,11 +300,11 @@ class gradientDescent:
 		# Go through the cases in a set
 		for row in caseSet:
 			# Pop off a case, then normalize it
-			c = self.normalizer([]+self.mat[row])
+			c = [] + self.scaler([]+self.mat[row][self.xStart:self.xEnd]) + [self.mat[row][self.y]]
 			# Get the the true value of our actual
-			actual = self.unnormal(c[self.y], self.y)
+			actual = c[self.y]
 			# Get the true value of our predicted
-			predicted = self.unnormal(self.predict(c), self.y)
+			predicted = self.predict(c)
 			# Record the total predicted values, will use this in another function
 			# (there is probably a better way to do this... idc!)
 			self.totPred += predicted
@@ -319,9 +319,9 @@ class gradientDescent:
 		# Go through the cases in a set
 		for row in caseSet:
 			# Pop a case, the normalize it
-			c = self.normalizer([]+self.mat[row])
+			c = [] + self.scaler([]+self.mat[row][self.xStart:self.xEnd]) + [self.mat[row][self.y]]
 			# Get the true value of the actual
-			actual = self.unnormal(c[self.y], self.y)
+			actual = c[self.y]
 			# Record the TSS for an instance
 			self.tss += ((actual - self.ymean) ** 2)
 			
@@ -389,34 +389,34 @@ class gradientDescent:
 		return [self.order] + ([] + self.wt) +  [trainRmse, trainRsq, self.trainCounter, self.elapsedTime, testRmse, testRsq, self.testCounter, self.test(len(testCases))]
 
 def runGradientDescent():
-    gp = gradientDescent("GasProperties.csv")
-    gp.setXandY(0, 5, 5)
-    testResults = []
-    results_format = ["ORDER"] + gp.features[:gp.xEnd] + ["TRAIN RMSE", "TRAIN R^2", "TRAINED CASES", "TRAINING TIME", "TEST RMSE", "TEST R^2", "TESTED CASES", "ERROR"]
-    cool_animation_thing = ["|", "\\", "-", "/"]
-    startTime = time()
-    with open("GP_MODELS.csv", mode = 'w', newline='') as outfile:
-        writer = csv.writer(outfile)
-        writer.writerow(["FEATURE","MIN","MAX"])
-        print("Writing normalizing values...")
-        for i in range(len(gp.normVals)):
-            os.system("cls")
-            print("Writing normalizing values... " + gp.features[i])
-            writer.writerow([gp.features[i], gp.normVals[i][0], gp.normVals[i][1]])
-        writer.writerow([])
-        writer.writerow(results_format)
-        os.system("cls")
-        print("Generating models...")
-        for i in range(1, 21):
-            os.system("cls")
-            print("Generating models... " + cool_animation_thing[(i - 1) % 4])
-            print(f"(Order: {float(i/2)})")
-            #set min error to 1 for true GD
-            gp.gd(alpha = 0.01, order = float(i/2), batchSize = 50, testSize = 10, minErr = 1, split = int(len(gp.mat) * (5/6)))
-            writer.writerow(gp.getResults())
-        os.system("cls")
-    endTime = time()
-    print("Done! (" + "{:.2f}".format(endTime - startTime) + "s)")
+	gp = gradientDescent("GasProperties.csv")
+	gp.setXandY(0, 5, 5)
+	testResults = []
+	results_format = ["ORDER"] + gp.features[:gp.xEnd] + ["TRAIN RMSE", "TRAIN R^2", "TRAINED CASES", "TRAINING TIME", "TEST RMSE", "TEST R^2", "TESTED CASES", "ERROR"]
+	cool_animation_thing = ["|", "\\", "-", "/"]
+	startTime = time()
+	with open("GP_MODELS.csv", mode = 'w', newline='') as outfile:
+		writer = csv.writer(outfile)
+		writer.writerow(["FEATURE","MIN","MAX"])
+		print("Writing normalizing values...")
+		for i in range(len(gp.normVals)):
+			os.system("cls")
+			print("Writing normalizing values... " + gp.features[i])
+			writer.writerow([gp.features[i], gp.normVals[i][0], gp.normVals[i][1]])
+		writer.writerow([])
+		writer.writerow(results_format)
+		os.system("cls")
+		print("Generating models...")
+		for i in range(1, 10):
+			os.system("cls")
+			print("Generating models... " + cool_animation_thing[(i - 1) % 4])
+			print(f"(Order: {float(i)})")
+			#set min error to 1 for true GD
+			gp.gd(alpha = 0.01, order = float(i), batchSize = 50 , testSize = 10, minErr = 0.01, split = int(len(gp.mat) * (5/6)))
+			writer.writerow(gp.getResults())
+		os.system("cls")
+	endTime = time()
+	print("Done! (" + "{:.2f}".format(endTime - startTime) + "s)")
 
 # LASSO
     
